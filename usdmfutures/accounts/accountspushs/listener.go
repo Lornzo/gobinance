@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 
@@ -28,6 +29,20 @@ type Listener struct {
 	isRunning       bool
 	subscribers     map[string]ListenerSubscriber
 	subscribersLock sync.RWMutex
+	isDebug         bool
+	isDebugLock     sync.RWMutex
+}
+
+func (l *Listener) Debug(isDebug bool) {
+	l.isDebugLock.Lock()
+	defer l.isDebugLock.Unlock()
+	l.isDebug = isDebug
+}
+
+func (l *Listener) IsDebug() bool {
+	l.isDebugLock.RLock()
+	defer l.isDebugLock.RUnlock()
+	return l.isDebug
 }
 
 func (l *Listener) Start(ctx context.Context) error {
@@ -59,15 +74,12 @@ func (l *Listener) Start(ctx context.Context) error {
 
 func (l *Listener) listen() {
 
-	type TypeIdentifier struct {
-		EventName string `json:"e"`
-	}
-
 	for {
 		var msgType int
 		var msg []byte
 		var msgErr error
-		var typeIdentifier TypeIdentifier
+		var typeIdentifier map[string]interface{}
+		var eventName string
 
 		if msgType, msg, msgErr = l.wsConn.ReadMessage(); msgErr != nil {
 			l.errorHandler(msgErr)
@@ -79,12 +91,23 @@ func (l *Listener) listen() {
 			break
 		}
 
+		if l.IsDebug() {
+			log.Print("accountspushs Listener accept message : ", string(msg), "\n")
+		}
+
 		if msgErr = json.Unmarshal(msg, &typeIdentifier); msgErr != nil {
 			l.errorHandler(msgErr)
 			continue
 		}
 
-		switch typeIdentifier.EventName {
+		if v, exist := typeIdentifier["e"]; !exist {
+			l.errorHandler(errors.New("event name not found"))
+			continue
+		} else {
+			eventName = v.(string)
+		}
+
+		switch eventName {
 		case EVENT_TYPE_LISTEN_KEY_EXPIRED:
 			l.listenKeyExpiredHandler(msg)
 		case EVENT_TYPE_ACCOUNT_UPDATE:
