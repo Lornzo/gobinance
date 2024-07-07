@@ -19,7 +19,20 @@ type AccountAsset struct {
 	UpdateTime             int64           `json:"updateTime"`             //更新时间
 }
 
+func (a AccountAsset) GetAssetName() string {
+	return a.Asset
+}
+
 type AccountAssets []AccountAsset
+
+func (a AccountAssets) GetAssetByAssetName(asset string) (AccountAsset, bool) {
+	for _, v := range a {
+		if v.GetAssetName() == asset {
+			return v, true
+		}
+	}
+	return AccountAsset{}, false
+}
 
 type AccountPosition struct {
 	Symbol                 string          `json:"symbol"`                 // 交易对
@@ -39,7 +52,20 @@ type AccountPosition struct {
 	UpdateTime             int64           `json:"updateTime"`             // 更新时间
 }
 
+func (a AccountPosition) GetSymbol() string {
+	return a.Symbol
+}
+
 type AccountPositions []AccountPosition
+
+func (a AccountPositions) GetPositionBySymbol(symbol string) (AccountPosition, bool) {
+	for _, v := range a {
+		if v.GetSymbol() == symbol {
+			return v, true
+		}
+	}
+	return AccountPosition{}, false
+}
 
 type AccountResponse struct {
 	MultiAssetsMargin           bool             `json:"multiAssetsMargin"`
