@@ -12,13 +12,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func NewListener(baseURL string, apiKey string, apiSecret string) *Listener {
+func NewListener(baseURL string, listenKey string) *Listener {
 	var listner *Listener = &Listener{
 		Base:        commons.NewBinanceWebsocketBase(),
 		subscribers: make(map[string]ListenerSubscriber),
 	}
 	listner.Base.SetBaseURL(baseURL)
-	listner.Base.SetAPIKeyAndSecret(apiKey, apiSecret)
+	listner.Base.SetPathes("ws", listenKey)
 	return listner
 }
 
