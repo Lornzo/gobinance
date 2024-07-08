@@ -9,6 +9,7 @@ type RestfulBase interface {
 	AddPathes(pathes ...string)
 	SetQuery(name string, value string)
 	DelQuery(name string)
+	GetQuery(name string) string
 	UseSignature(isUse bool)
 	UseApiKeyHeader(isUse bool)
 	GET(ctx context.Context, result interface{}) (int, error)

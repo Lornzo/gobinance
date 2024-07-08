@@ -57,6 +57,10 @@ func (b *BinanceRestfulBase) DelQuery(name string) {
 	b.Queries.DelQuery(name)
 }
 
+func (b *BinanceRestfulBase) GetQuery(name string) string {
+	return b.Queries.GetQueryValue(name)
+}
+
 func (b *BinanceRestfulBase) UseApiKeyHeader(isUse bool) {
 	b.IsAPIKey = isUse
 }
