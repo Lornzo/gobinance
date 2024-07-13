@@ -1,0 +1,3 @@
+package marketdataswebsockets
+
+type binanceStreamName string
