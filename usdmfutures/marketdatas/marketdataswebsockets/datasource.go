@@ -36,7 +36,7 @@ func (d *DataSource) Close() error {
 func (d *DataSource) SubscribeKLine(subscriber KLineSubscriber) error {
 
 	var (
-		kLineStream string        = fmt.Sprint(subscriber.GetSymbol(), "@kline_", subscriber.GetInterval())
+		kLineStream string        = d.getKLineStream(subscriber.GetSymbol(), subscriber.GetInterval())
 		listener    kLineListener = d.kLineListeners.getListener(kLineStream)
 	)
 
@@ -48,4 +48,36 @@ func (d *DataSource) SubscribeKLine(subscriber KLineSubscriber) error {
 
 	return listener.subscribe(subscriber)
 
+}
+
+func (d *DataSource) UnSubscribeKLine(subscriber KLineSubscriber) error {
+
+	var (
+		streamName string        = d.getKLineStream(subscriber.GetSymbol(), subscriber.GetInterval())
+		listener   kLineListener = d.kLineListeners.getListener(streamName)
+		err        error
+	)
+
+	if listener == nil {
+		return nil
+	}
+
+	if err = listener.unsubscribe(subscriber); err != nil {
+		return err
+	}
+
+	if listener.hasSubscribers() {
+		return nil
+	}
+
+	if err = d.concreteDataSource.rmListener(listener); err != nil {
+		return err
+	}
+
+	return d.kLineListeners.rmListener(listener.getStreamName())
+
+}
+
+func (d *DataSource) getKLineStream(symbol string, interval string) string {
+	return fmt.Sprint(symbol, "@kline_", interval)
 }
