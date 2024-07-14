@@ -3,6 +3,7 @@ package commons
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 func NewBinanceWebsocketBase() *BinanceWebsocketBase {
@@ -10,10 +11,12 @@ func NewBinanceWebsocketBase() *BinanceWebsocketBase {
 }
 
 type BinanceWebsocketBase struct {
-	APIKey    string
-	APISecret string
-	BaseURL   string
-	Pathes    []string
+	APIKey      string
+	APISecret   string
+	BaseURL     string
+	Pathes      []string
+	running     bool
+	runningLock sync.RWMutex
 }
 
 func (b *BinanceWebsocketBase) SetAPIKeyAndSecret(key string, secret string) {
@@ -35,4 +38,16 @@ func (b *BinanceWebsocketBase) GetWebsocketURL() string {
 		url += fmt.Sprint("/", strings.Join(b.Pathes, "/"))
 	}
 	return url
+}
+
+func (b *BinanceWebsocketBase) SetRunning(isRunning bool) {
+	b.runningLock.Lock()
+	defer b.runningLock.Unlock()
+	b.running = isRunning
+}
+
+func (b *BinanceWebsocketBase) IsRunning() bool {
+	b.runningLock.RLock()
+	defer b.runningLock.RUnlock()
+	return b.running
 }

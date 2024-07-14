@@ -5,4 +5,6 @@ type WebsocketBase interface {
 	SetBaseURL(url string)
 	SetPathes(pathes ...string)
 	GetWebsocketURL() string
+	SetRunning(isRunning bool)
+	IsRunning() bool
 }
