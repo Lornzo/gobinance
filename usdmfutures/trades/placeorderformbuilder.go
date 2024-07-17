@@ -2,12 +2,12 @@ package trades
 
 import (
 	"errors"
-	"fmt"
 )
 
 type placeOrderFormBuilder struct {
 	account Account
 	order   PlaceOrderForm
+	builder signatureBuilder
 }
 
 func (p placeOrderFormBuilder) check() error {
@@ -20,6 +20,10 @@ func (p placeOrderFormBuilder) check() error {
 		return errors.New("need object order in builder")
 	}
 
+	if p.builder == nil {
+		return errors.New("need signatureBuilder in builder")
+	}
+
 	return nil
 
 }
@@ -27,46 +31,17 @@ func (p placeOrderFormBuilder) check() error {
 func (p placeOrderFormBuilder) buildRequestBody() (map[string]interface{}, error) {
 
 	var (
-		bodyMap   map[string]interface{}
-		err       error
-		queries   []string
-		signature string
+		bodyMap map[string]interface{}
+		err     error
 	)
-
-	if queries, err = p.buildQueriesArray(); err != nil {
-		return nil, err
-	}
-
-	if signature, err = p.account.GetSignatureWithQueries(queries...); err != nil {
-		return nil, err
-	}
 
 	if bodyMap, err = p.buildMap(); err != nil {
 		return nil, err
 	}
 
-	bodyMap["signature"] = signature
+	p.builder.SetAPIKeyAndSecret(p.account.GetAPIKey(), p.account.GetAPISecret())
 
-	return bodyMap, nil
-
-}
-
-func (p placeOrderFormBuilder) buildQueriesArray() ([]string, error) {
-	var (
-		err     error
-		queries []string
-		dstMap  map[string]interface{}
-	)
-
-	if dstMap, err = p.buildMap(); err != nil {
-		return nil, err
-	}
-
-	for key, value := range dstMap {
-		queries = append(queries, fmt.Sprint(key, "=", value))
-	}
-
-	return queries, nil
+	return p.builder.BuildRequestBodyWithSignature(bodyMap)
 
 }
 
@@ -80,8 +55,6 @@ func (p placeOrderFormBuilder) buildMap() (map[string]interface{}, error) {
 	if err = p.check(); err != nil {
 		return nil, err
 	}
-
-	dstMap["apiKey"] = p.account.GetAPIKey()
 
 	if symbol := p.order.GetSymbol(); symbol != "" {
 		dstMap["symbol"] = symbol

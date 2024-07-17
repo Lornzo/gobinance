@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Lornzo/gobinance/binancetypes"
 	"github.com/Lornzo/gobinance/channels"
 	"github.com/Lornzo/gobinance/commons"
 	"github.com/google/uuid"
@@ -165,8 +166,9 @@ func (w *Websocket) CancelOrder(ctx context.Context, account Account, order Canc
 			Params map[string]interface{} `json:"params"`
 		}
 		builder cancelOrderFormBuilder = cancelOrderFormBuilder{
-			account: account,
-			order:   order,
+			account:         account,
+			order:           order,
+			concreteBuilder: binancetypes.NewBinanceSignatureBuilder(),
 		}
 	)
 
@@ -217,6 +219,7 @@ func (w *Websocket) CreateOrder(ctx context.Context, account Account, order Plac
 		builder placeOrderFormBuilder = placeOrderFormBuilder{
 			account: account,
 			order:   order,
+			builder: binancetypes.NewBinanceSignatureBuilder(),
 		}
 		err error
 	)

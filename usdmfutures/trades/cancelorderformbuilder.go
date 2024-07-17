@@ -2,12 +2,12 @@ package trades
 
 import (
 	"errors"
-	"fmt"
 )
 
 type cancelOrderFormBuilder struct {
-	account Account
-	order   CancelOrderForm
+	account         Account
+	order           CancelOrderForm
+	concreteBuilder signatureBuilder
 }
 
 func (c cancelOrderFormBuilder) check() error {
@@ -20,6 +20,10 @@ func (c cancelOrderFormBuilder) check() error {
 		return errors.New("need object order in builder")
 	}
 
+	if c.concreteBuilder == nil {
+		return errors.New("need signatureBuilder in builder")
+	}
+
 	return nil
 
 }
@@ -27,47 +31,18 @@ func (c cancelOrderFormBuilder) check() error {
 func (c cancelOrderFormBuilder) buildRequestBody() (map[string]interface{}, error) {
 
 	var (
-		bodyMap   map[string]interface{}
-		err       error
-		queries   []string
-		signature string
+		bodyMap map[string]interface{}
+		err     error
 	)
-
-	if queries, err = c.buildQueriesArray(); err != nil {
-		return nil, err
-	}
-
-	if signature, err = c.account.GetSignatureWithQueries(queries...); err != nil {
-		return nil, err
-	}
 
 	if bodyMap, err = c.buildMap(); err != nil {
 		return nil, err
 	}
 
-	bodyMap["signature"] = signature
+	c.concreteBuilder.SetAPIKeyAndSecret(c.account.GetAPIKey(), c.account.GetAPISecret())
 
-	return bodyMap, nil
+	return c.concreteBuilder.BuildRequestBodyWithSignature(bodyMap)
 
-}
-
-func (c cancelOrderFormBuilder) buildQueriesArray() ([]string, error) {
-
-	var (
-		err     error
-		queries []string
-		dstMap  map[string]interface{}
-	)
-
-	if dstMap, err = c.buildMap(); err != nil {
-		return nil, err
-	}
-
-	for key, value := range dstMap {
-		queries = append(queries, fmt.Sprint(key, "=", value))
-	}
-
-	return queries, nil
 }
 
 func (c cancelOrderFormBuilder) buildMap() (map[string]interface{}, error) {
@@ -80,8 +55,6 @@ func (c cancelOrderFormBuilder) buildMap() (map[string]interface{}, error) {
 	if err = c.check(); err != nil {
 		return nil, err
 	}
-
-	dstMap["apiKey"] = c.account.GetAPIKey()
 
 	if symbol := c.order.GetSymbol(); symbol != "" {
 		dstMap["symbol"] = symbol
