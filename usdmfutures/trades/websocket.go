@@ -117,10 +117,6 @@ func (w *Websocket) listenToSource() {
 			log.Println("error write channel => ", err)
 		}
 
-		// fmt.Println("msgType => ", msgType)
-		// fmt.Println("msgBytes => ", string(msgBytes))
-		// fmt.Println("err => ", err)
-
 	}
 }
 
@@ -153,6 +149,53 @@ func (w *Websocket) Close() error {
 	w.Base.SetRunning(false)
 
 	return nil
+
+}
+
+func (w *Websocket) CancelOrder(ctx context.Context, account Account, order CancelOrderForm) (CanceledOrder, error) {
+
+	var (
+		canceledOrder CanceledOrder
+		response      []byte
+		err           error
+		channelID     string = uuid.NewString()
+		request       struct {
+			ID     string                 `json:"id"`
+			Method string                 `json:"method"`
+			Params map[string]interface{} `json:"params"`
+		}
+		builder cancelOrderFormBuilder = cancelOrderFormBuilder{
+			account: account,
+			order:   order,
+		}
+	)
+
+	request.ID = channelID
+	request.Method = "order.cancel"
+
+	if err = w.bytesChannel.CreateChannel(channelID); err != nil {
+		return CanceledOrder{}, err
+	}
+
+	defer w.bytesChannel.CloseChannel(channelID)
+
+	if request.Params, err = builder.buildRequestBody(); err != nil {
+		return CanceledOrder{}, err
+	}
+
+	if err = w.makeRequest(request); err != nil {
+		return CanceledOrder{}, err
+	}
+
+	if response, err = w.bytesChannel.ReadChannel(channelID); err != nil {
+		return CanceledOrder{}, err
+	}
+
+	if err = json.Unmarshal(response, &canceledOrder); err != nil {
+		return CanceledOrder{}, err
+	}
+
+	return canceledOrder, nil
 
 }
 
