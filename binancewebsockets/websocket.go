@@ -1,6 +1,7 @@
 package binancewebsockets
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -35,6 +36,7 @@ func NewWebsocket(wsURL string) (Websocket, error) {
 type Websocket interface {
 	Subscribe(subscriber Subscriber) error
 	UnSubscribe(subscriber Subscriber) error
-	ReadMessage() (int, []byte, error)
+	ReadMessage(ctx context.Context) (int, []byte, error)
 	WriteJSON(interface{}) error
+	Close() error
 }
