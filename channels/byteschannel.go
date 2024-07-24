@@ -1,18 +1,29 @@
 package channels
 
 import (
-	"errors"
+	"encoding/json"
+	"fmt"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
-type bytesChannelData struct {
-	bytes []byte
-	err   error
+type BytesChannel struct {
+	channels    map[string]chan bytesChannelData
+	lock        sync.RWMutex
+	counter     int
+	counterLock sync.Mutex
 }
 
-type BytesChannel struct {
-	channels map[string]chan bytesChannelData
-	lock     sync.RWMutex
+func (b *BytesChannel) GetID() string {
+	return uuid.NewString()
+}
+
+func (b *BytesChannel) GetIntID() int {
+	b.counterLock.Lock()
+	defer b.counterLock.Unlock()
+	b.counter++
+	return b.counter
 }
 
 func (b *BytesChannel) Close() error {
@@ -32,7 +43,7 @@ func (b *BytesChannel) Close() error {
 	return nil
 }
 
-func (b *BytesChannel) CreateChannel(channelID string) error {
+func (b *BytesChannel) CreateChannel(channelID interface{}) error {
 
 	b.lock.Lock()
 
@@ -42,47 +53,52 @@ func (b *BytesChannel) CreateChannel(channelID string) error {
 		b.channels = make(map[string]chan bytesChannelData)
 	}
 
-	if _, exist := b.channels[channelID]; exist {
-		return errors.New("channel already exist")
+	var id string = fmt.Sprint(channelID)
+
+	if _, exist := b.channels[id]; exist {
+		return fmt.Errorf("channel already exist: %s", id)
 	}
-	b.channels[channelID] = make(chan bytesChannelData)
+	b.channels[id] = make(chan bytesChannelData)
 
 	return nil
 }
 
-func (b *BytesChannel) CloseChannel(channelID string) error {
+func (b *BytesChannel) CloseChannel(channelID interface{}) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	var id string = fmt.Sprint(channelID)
+
 	if b.channels == nil {
-		return errors.New("channel not exist")
+		return fmt.Errorf("channel not exist: %s", id)
 	}
 
-	if channel, exist := b.channels[channelID]; exist {
+	if channel, exist := b.channels[id]; exist {
 		close(channel)
-		delete(b.channels, channelID)
+		delete(b.channels, id)
 		return nil
 	}
-	return errors.New("channel not exist")
+	return fmt.Errorf("channel not exist: %s", id)
 
 }
 
-func (b *BytesChannel) getChannel(channelID string) (chan bytesChannelData, error) {
+func (b *BytesChannel) getChannel(channelID interface{}) (chan bytesChannelData, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.channels == nil {
-		return nil, errors.New("channel not exist")
+	var id string = fmt.Sprint(channelID)
 
+	if b.channels == nil {
+		return nil, fmt.Errorf("channel not exist: %s", id)
 	}
 
-	if channel, exist := b.channels[channelID]; exist {
+	if channel, exist := b.channels[id]; exist {
 		return channel, nil
 	}
-	return nil, errors.New("channel not exist")
+	return nil, fmt.Errorf("channel not exist: %s", id)
 }
 
-func (b *BytesChannel) WriteChannel(channelID string, bytes []byte, bytesErr error) error {
+func (b *BytesChannel) WriteChannel(channelID interface{}, bytes []byte, bytesErr error) error {
 
 	var (
 		channel chan bytesChannelData
@@ -101,7 +117,7 @@ func (b *BytesChannel) WriteChannel(channelID string, bytes []byte, bytesErr err
 	return nil
 }
 
-func (b *BytesChannel) ReadChannel(channelID string) ([]byte, error) {
+func (b *BytesChannel) ReadChannel(channelID interface{}) ([]byte, error) {
 
 	var (
 		channel chan bytesChannelData
@@ -119,4 +135,19 @@ func (b *BytesChannel) ReadChannel(channelID string) ([]byte, error) {
 	}
 
 	return data.bytes, nil
+}
+
+func (b *BytesChannel) ReadChannelJSON(channelID interface{}, data interface{}) error {
+
+	var (
+		bytes []byte
+		err   error
+	)
+
+	if bytes, err = b.ReadChannel(channelID); err != nil {
+		return err
+	}
+
+	return json.Unmarshal(bytes, data)
+
 }
