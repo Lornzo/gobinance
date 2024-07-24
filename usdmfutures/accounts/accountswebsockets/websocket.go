@@ -6,6 +6,7 @@ import (
 
 	"github.com/Lornzo/gobinance/binancewebsockets"
 	"github.com/Lornzo/gobinance/usdmfutures/accounts/accountsrests"
+	"github.com/Lornzo/gobinance/usdmfutures/usdmfutureswebsockettypes"
 )
 
 type Websocket interface {
@@ -37,6 +38,7 @@ func NewWebsocket(ctx context.Context, binanceWebsocketURL string, binanceRestUR
 	ws.concreateRest = rest
 	ws.listenKey.Set(listenKeyResp.ListenKey)
 	ws.account.Set(account.GetAPIKey(), account.GetAPISecret())
+	ws.errorSubscribers = &usdmfutureswebsockettypes.ErrorSubscribers{}
 
 	if ws.ws, err = binancewebsockets.NewWebsocket(fmt.Sprint(binanceWebsocketURL, "/ws/", ws.listenKey.Get())); err != nil {
 		return nil, err

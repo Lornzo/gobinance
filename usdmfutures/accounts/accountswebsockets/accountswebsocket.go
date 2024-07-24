@@ -251,11 +251,11 @@ func (a *accountsWebsocket) UnSubscribeRateLimits(subscriber RateLimitsSubscribe
 }
 
 func (a *accountsWebsocket) SubscribeError(subscriber ErrorSubscriber) error {
-	return a.errorSubscribers.subscribe(subscriber)
+	return a.errorSubscribers.Subscribe(subscriber)
 }
 
 func (a *accountsWebsocket) UnSubscribeError(subscriber ErrorSubscriber) error {
-	return a.errorSubscribers.unsubscribe(subscriber)
+	return a.errorSubscribers.UnSubscribe(subscriber)
 }
 
 // listen key 過期
@@ -363,12 +363,12 @@ func (a *accountsWebsocket) runHandler(msgType int, msg []byte, msgError error) 
 	}
 
 	if msgError != nil {
-		a.errorSubscribers.update(msgError)
+		a.errorSubscribers.UpdateError(msgError)
 		return
 	}
 
 	if err = json.Unmarshal(msg, &msgMap); err != nil {
-		a.errorSubscribers.update(err)
+		a.errorSubscribers.UpdateError(err)
 		return
 	}
 
@@ -387,7 +387,7 @@ func (a *accountsWebsocket) disconnectHandler(msgType int, err error) {
 
 	var disconnectError error = fmt.Errorf("websocket disconnect, msg type: %d, msg: %w", msgType, err)
 
-	a.errorSubscribers.update(disconnectError)
+	a.errorSubscribers.UpdateError(disconnectError)
 
 	a.listenKeyExpiredSubscribers.update(nil, disconnectError)
 
@@ -439,7 +439,7 @@ func (a *accountsWebsocket) eventNameHandler(eventName string, msg []byte, msgMa
 		}
 
 		var accountConfigUpdateError error = fmt.Errorf("unknown account config update message : %s", string(msg))
-		a.errorSubscribers.update(accountConfigUpdateError)
+		a.errorSubscribers.UpdateError(accountConfigUpdateError)
 		a.accountConfigUpdateSubscribers.update(nil, accountConfigUpdateError)
 		a.accountInfoUpdateSubscribers.update(nil, accountConfigUpdateError)
 		return
@@ -454,7 +454,7 @@ func (a *accountsWebsocket) eventNameHandler(eventName string, msg []byte, msgMa
 		a.conditionalOrderTriggerRejectHandler(msg)
 		return
 	default:
-		a.errorSubscribers.update(fmt.Errorf("unknown event name : %s", eventName))
+		a.errorSubscribers.UpdateError(fmt.Errorf("unknown event name : %s", eventName))
 	}
 
 }
@@ -464,7 +464,7 @@ func (a *accountsWebsocket) requestHandler(requestID interface{}, msg []byte) {
 	var err error = a.bytesChannel.WriteChannel(requestID, msg, nil)
 
 	if err != nil {
-		a.errorSubscribers.update(err)
+		a.errorSubscribers.UpdateError(err)
 	}
 }
 
@@ -476,7 +476,7 @@ func (a *accountsWebsocket) listenKeyExpiredhandler(msg []byte) {
 	)
 
 	if err = json.Unmarshal(msg, &resp); err != nil {
-		a.errorSubscribers.update(err)
+		a.errorSubscribers.UpdateError(err)
 		a.listenKeyExpiredSubscribers.update(nil, err)
 		return
 	}
@@ -493,7 +493,7 @@ func (a *accountsWebsocket) accountUpdateHandler(msg []byte) {
 	)
 
 	if err = json.Unmarshal(msg, &resp); err != nil {
-		a.errorSubscribers.update(err)
+		a.errorSubscribers.UpdateError(err)
 		a.accountUpdateSubscribers.update(nil, err)
 		return
 	}
@@ -510,7 +510,7 @@ func (a *accountsWebsocket) marginCallHandler(msg []byte) {
 	)
 
 	if err = json.Unmarshal(msg, &resp); err != nil {
-		a.errorSubscribers.update(err)
+		a.errorSubscribers.UpdateError(err)
 		a.marginCallSubscribers.update(nil, err)
 		return
 	}
