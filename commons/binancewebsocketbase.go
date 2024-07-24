@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/Lornzo/gobinance/threadsafetypes"
 )
 
 func NewBinanceWebsocketBase() *BinanceWebsocketBase {
@@ -11,43 +13,74 @@ func NewBinanceWebsocketBase() *BinanceWebsocketBase {
 }
 
 type BinanceWebsocketBase struct {
-	APIKey      string
-	APISecret   string
-	BaseURL     string
-	Pathes      []string
-	running     bool
-	runningLock sync.RWMutex
+	baseURL threadsafetypes.String
+	pathes  threadsafetypes.StringSlice
+	running threadsafetypes.Bool
+	debug   threadsafetypes.Bool
 }
 
-func (b *BinanceWebsocketBase) SetAPIKeyAndSecret(key string, secret string) {
-	b.APIKey = key
-	b.APISecret = secret
+func (b *BinanceWebsocketBase) SetBaseURL(url string) error {
+
+	if b.IsRunning() {
+		return fmt.Errorf("cannot set base url while websocket is running")
+	}
+
+	b.baseURL.Set(url)
+
+	return nil
 }
 
-func (b *BinanceWebsocketBase) SetBaseURL(url string) {
-	b.BaseURL = url
-}
+func (b *BinanceWebsocketBase) SetPathes(pathes ...string) error {
 
-func (b *BinanceWebsocketBase) SetPathes(pathes ...string) {
-	b.Pathes = pathes
+	if b.IsRunning() {
+		return fmt.Errorf("cannot set pathes while websocket is running")
+	}
+
+	b.pathes.Set(pathes...)
+
+	return nil
 }
 
 func (b *BinanceWebsocketBase) GetWebsocketURL() string {
-	var url string = b.BaseURL
-	if len(b.Pathes) > 0 {
-		url += fmt.Sprint("/", strings.Join(b.Pathes, "/"))
+
+	var (
+		wg     sync.WaitGroup
+		wsURL  string
+		pathes []string
+	)
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		wsURL = b.baseURL.Get()
+	}()
+
+	go func() {
+		defer wg.Done()
+		pathes = b.pathes.Get()
+	}()
+
+	wg.Wait()
+
+	if len(pathes) > 0 {
+		wsURL += fmt.Sprint("/", strings.Join(pathes, "/"))
 	}
-	return url
+	return wsURL
 }
 
 func (b *BinanceWebsocketBase) SetRunning(isRunning bool) {
-	b.runningLock.Lock()
-	defer b.runningLock.Unlock()
-	b.running = isRunning
+	b.running.Set(isRunning)
 }
 
 func (b *BinanceWebsocketBase) IsRunning() bool {
-	b.runningLock.RLock()
-	defer b.runningLock.RUnlock()
-	return b.running
+	return b.running.Get()
+}
+
+func (b *BinanceWebsocketBase) SetDebug(isDebug bool) {
+	b.debug.Set(isDebug)
+}
+
+func (b *BinanceWebsocketBase) IsDebug() bool {
+	return b.debug.Get()
 }

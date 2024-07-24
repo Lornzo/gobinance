@@ -1,10 +1,11 @@
 package commons
 
 type WebsocketBase interface {
-	SetAPIKeyAndSecret(key string, secret string)
-	SetBaseURL(url string)
-	SetPathes(pathes ...string)
+	SetBaseURL(url string) error
+	SetPathes(pathes ...string) error
 	GetWebsocketURL() string
 	SetRunning(isRunning bool)
 	IsRunning() bool
+	SetDebug(isDebug bool)
+	IsDebug() bool
 }
