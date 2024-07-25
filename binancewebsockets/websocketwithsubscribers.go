@@ -2,40 +2,92 @@ package binancewebsockets
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"log"
 	"sync"
 
+	"github.com/Lornzo/gobinance/channels"
 	"github.com/Lornzo/gobinance/threadsafetypes"
 	"github.com/gorilla/websocket"
 )
 
 type websocketWithSubscribers struct {
 	*websocket.Conn
+	channel     channels.WebsocketMsgChannel
 	subscribers subscribers
 	isRuning    threadsafetypes.Bool
-	isDebug     threadsafetypes.Bool
-}
-
-func (w *websocketWithSubscribers) Debug() {
-	w.isDebug.Set(true)
-	log.Println("websocket debug mode on")
 }
 
 func (w *websocketWithSubscribers) Subscribe(subscriber Subscriber) error {
-
-	var err error = w.subscribers.add(subscriber)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-
+	return w.subscribers.add(subscriber)
 }
 
 func (w *websocketWithSubscribers) UnSubscribe(subscriber Subscriber) error {
 	return w.subscribers.remove(subscriber)
+}
+
+func (w *websocketWithSubscribers) MakeRequestByIntIndex(ctx context.Context, request Request) (int, []byte, error) {
+	var channelID int = w.channel.GetIntID()
+	return w.makeRequest(ctx, channelID, request)
+}
+
+func (w *websocketWithSubscribers) MakeRequestByUUIDIndex(ctx context.Context, request Request) (int, []byte, error) {
+	var channelID string = w.channel.GetID()
+	return w.makeRequest(ctx, channelID, request)
+}
+
+func (w *websocketWithSubscribers) makeRequest(ctx context.Context, requestID interface{}, request Request) (int, []byte, error) {
+
+	type response struct {
+		msgType int
+		msg     []byte
+		err     error
+	}
+
+	var (
+		err error
+		req struct {
+			ID     interface{} `json:"id"`
+			Method string      `json:"method"`
+			Params interface{} `json:"params"`
+		}
+		resp chan response = make(chan response)
+	)
+
+	defer close(resp)
+
+	req.ID = requestID
+	req.Method = request.GetMethod()
+	req.Params = request.GetParams()
+
+	if err = w.channel.CreateChannel(requestID); err != nil {
+		return 0, nil, err
+	}
+
+	defer w.channel.CloseChannel(requestID)
+
+	go func() {
+
+		msgType, msg, err := w.channel.ReadChannel(requestID)
+		resp <- response{
+			msgType: msgType,
+			msg:     msg,
+			err:     err,
+		}
+
+	}()
+
+	if err = w.WriteJSON(req); err != nil {
+		return 0, nil, err
+	}
+
+	select {
+	case <-ctx.Done():
+		return 0, nil, errors.New("request timeout")
+	case data := <-resp:
+		return data.msgType, data.msg, data.err
+	}
+
 }
 
 func (w *websocketWithSubscribers) ReadMessage(ctx context.Context) (int, []byte, error) {
@@ -69,7 +121,12 @@ func (w *websocketWithSubscribers) ReadMessage(ctx context.Context) (int, []byte
 		msgErr = msg.err
 	}
 
+	if msgType == -1 {
+		msgErr = errors.New("websocket close")
+	}
+
 	go w.subscribers.update(msgType, msgBytes, msgErr)
+	go w.idHandler(msgType, msgBytes, msgErr)
 
 	return msgType, msgBytes, msgErr
 }
@@ -84,15 +141,15 @@ func (w *websocketWithSubscribers) Run(ctx context.Context, handlers ...MessageH
 	defer w.isRuning.Set(false)
 
 	for {
+
 		msgType, msgBytes, msgErr := w.ReadMessage(ctx)
 
+		go w.updateHandlers(msgType, msgBytes, msgErr, handlers...)
+
 		if msgType == -1 {
-			msgErr = errors.New("websocket close")
-			w.updateHandlers(msgType, msgBytes, msgErr, handlers...)
 			break
 		}
 
-		go w.updateHandlers(msgType, msgBytes, msgErr, handlers...)
 	}
 }
 
@@ -144,4 +201,29 @@ func (w *websocketWithSubscribers) updateHandlers(msgType int, msg []byte, err e
 	for _, handler := range handlers {
 		handler(msgType, msg, err)
 	}
+}
+
+func (w *websocketWithSubscribers) idHandler(msgType int, msg []byte, msgErr error) {
+
+	if msgType == -1 {
+		w.channel.WriteChannelAll(msgType, msg, msgErr)
+	}
+
+	var (
+		channelID    interface{}
+		channelExist bool
+		msgMap       map[string]interface{}
+		err          error
+	)
+
+	if err = json.Unmarshal(msg, &msgMap); err != nil {
+		return
+	}
+
+	if channelID, channelExist = msgMap["id"]; !channelExist {
+		return
+	}
+
+	w.channel.WriteChannel(channelID, msgType, msg, msgErr)
+
 }

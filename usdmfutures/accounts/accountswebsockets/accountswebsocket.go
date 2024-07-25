@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/Lornzo/gobinance/binancewebsockets"
-	"github.com/Lornzo/gobinance/channels"
 	"github.com/Lornzo/gobinance/threadsafetypes"
 	"github.com/Lornzo/gobinance/usdmfutures/accounts/accountsrests"
 )
@@ -17,7 +16,6 @@ type accountsWebsocket struct {
 	ws                                       binancewebsockets.Websocket
 	account                                  threadsafetypes.Account
 	listenKey                                threadsafetypes.String
-	bytesChannel                             channels.BytesChannel
 	errorSubscribers                         errorSubscribers
 	listenKeyExpiredSubscribers              listenKeyExpiredSubscribers
 	accountUpdateSubscribers                 accountUpdateSubscribers
@@ -147,63 +145,6 @@ func (a *accountsWebsocket) RequestAccountInformation(ctx context.Context) (Acco
 
 }
 
-func (a *accountsWebsocket) requestBytes(ctx context.Context, id interface{}, method string, params interface{}) ([]byte, error) {
-
-	type response struct {
-		bytes []byte
-		err   error
-	}
-
-	var (
-		err     error
-		request struct {
-			ID     interface{} `json:"id"`
-			Method string      `json:"method"`
-			Params interface{} `json:"params"`
-		}
-		resp chan response = make(chan response)
-	)
-
-	defer close(resp)
-
-	request.ID = id
-	request.Method = method
-	request.Params = params
-
-	if err = a.bytesChannel.CreateChannel(request.ID); err != nil {
-		return nil, err
-	}
-
-	defer a.bytesChannel.CloseChannel(request.ID)
-
-	go func() {
-
-		var (
-			bytes      []byte
-			channelErr error
-		)
-
-		bytes, channelErr = a.bytesChannel.ReadChannel(request.ID)
-
-		resp <- response{
-			bytes: bytes,
-			err:   channelErr,
-		}
-
-	}()
-
-	if err = a.ws.WriteJSON(request); err != nil {
-		return nil, err
-	}
-
-	select {
-	case <-ctx.Done():
-		return nil, errors.New("context timeout")
-	case data := <-resp:
-		return data.bytes, data.err
-	}
-}
-
 func (a *accountsWebsocket) request(ctx context.Context, names ...string) ([]byte, error) {
 
 	if len(names) == 0 {
@@ -211,6 +152,10 @@ func (a *accountsWebsocket) request(ctx context.Context, names ...string) ([]byt
 	}
 
 	var (
+		request binancewebsockets.BinanceRequest = binancewebsockets.BinanceRequest{
+			Method: "REQUEST",
+			Params: names,
+		}
 		bytes []byte
 		err   error
 		data  struct {
@@ -222,7 +167,7 @@ func (a *accountsWebsocket) request(ctx context.Context, names ...string) ([]byt
 		}
 	)
 
-	if bytes, err = a.requestBytes(ctx, a.bytesChannel.GetIntID(), "REQUEST", names); err != nil {
+	if _, bytes, err = a.ws.MakeRequestByIntIndex(ctx, request); err != nil {
 		return nil, err
 	}
 
@@ -377,10 +322,6 @@ func (a *accountsWebsocket) runHandler(msgType int, msg []byte, msgError error) 
 		return
 	}
 
-	if requestID, idExist := msgMap["id"]; idExist {
-		a.requestHandler(requestID, msg)
-		return
-	}
 }
 
 func (a *accountsWebsocket) disconnectHandler(msgType int, err error) {
@@ -457,15 +398,6 @@ func (a *accountsWebsocket) eventNameHandler(eventName string, msg []byte, msgMa
 		a.errorSubscribers.UpdateError(fmt.Errorf("unknown event name : %s", eventName))
 	}
 
-}
-
-func (a *accountsWebsocket) requestHandler(requestID interface{}, msg []byte) {
-
-	var err error = a.bytesChannel.WriteChannel(requestID, msg, nil)
-
-	if err != nil {
-		a.errorSubscribers.UpdateError(err)
-	}
 }
 
 func (a *accountsWebsocket) listenKeyExpiredhandler(msg []byte) {

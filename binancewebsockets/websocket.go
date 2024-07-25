@@ -36,6 +36,8 @@ func NewWebsocket(wsURL string) (Websocket, error) {
 type Websocket interface {
 	Subscribe(subscriber Subscriber) error
 	UnSubscribe(subscriber Subscriber) error
+	MakeRequestByIntIndex(ctx context.Context, request Request) (int, []byte, error)
+	MakeRequestByUUIDIndex(ctx context.Context, request Request) (int, []byte, error)
 	Run(ctx context.Context, handlers ...MessageHander)
 	RunNewThread(ctx context.Context, handlers ...MessageHander)
 	WriteJSON(interface{}) error
