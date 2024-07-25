@@ -119,11 +119,7 @@ func (b *BytesChannelInt) ReadChannel(channelID int) ([]byte, error) {
 		return nil, err
 	}
 
-	fmt.Println("get channel")
-
 	data := <-channel
-
-	fmt.Println("reac channel data")
 
 	if err = data.err; err != nil {
 		return nil, err

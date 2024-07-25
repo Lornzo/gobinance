@@ -26,23 +26,17 @@ func (w *websocketWithSubscribers) UnSubscribe(subscriber Subscriber) error {
 	return w.subscribers.remove(subscriber)
 }
 
-func (w *websocketWithSubscribers) MakeRequestByIntIndex(ctx context.Context, request Request) (int, []byte, error) {
+func (w *websocketWithSubscribers) MakeRequestByIntIndex(ctx context.Context, request Request) (Response, error) {
 	var channelID int = w.channel.GetIntID()
-	return w.makeRequest(ctx, channelID, request)
+	return w.MakeRequest(ctx, channelID, request)
 }
 
-func (w *websocketWithSubscribers) MakeRequestByUUIDIndex(ctx context.Context, request Request) (int, []byte, error) {
+func (w *websocketWithSubscribers) MakeRequestByUUIDIndex(ctx context.Context, request Request) (Response, error) {
 	var channelID string = w.channel.GetID()
-	return w.makeRequest(ctx, channelID, request)
+	return w.MakeRequest(ctx, channelID, request)
 }
 
-func (w *websocketWithSubscribers) makeRequest(ctx context.Context, requestID interface{}, request Request) (int, []byte, error) {
-
-	type response struct {
-		msgType int
-		msg     []byte
-		err     error
-	}
+func (w *websocketWithSubscribers) MakeRequest(ctx context.Context, requestID interface{}, request Request) (Response, error) {
 
 	var (
 		err error
@@ -51,7 +45,7 @@ func (w *websocketWithSubscribers) makeRequest(ctx context.Context, requestID in
 			Method string      `json:"method"`
 			Params interface{} `json:"params"`
 		}
-		resp chan response = make(chan response)
+		resp chan Response = make(chan Response)
 	)
 
 	defer close(resp)
@@ -61,7 +55,7 @@ func (w *websocketWithSubscribers) makeRequest(ctx context.Context, requestID in
 	req.Params = request.GetParams()
 
 	if err = w.channel.CreateChannel(requestID); err != nil {
-		return 0, nil, err
+		return Response{}, err
 	}
 
 	defer w.channel.CloseChannel(requestID)
@@ -69,23 +63,24 @@ func (w *websocketWithSubscribers) makeRequest(ctx context.Context, requestID in
 	go func() {
 
 		msgType, msg, err := w.channel.ReadChannel(requestID)
-		resp <- response{
-			msgType: msgType,
-			msg:     msg,
-			err:     err,
+		resp <- Response{
+			RequestID: requestID,
+			Type:      msgType,
+			Msg:       msg,
+			Err:       err,
 		}
 
 	}()
 
 	if err = w.WriteJSON(req); err != nil {
-		return 0, nil, err
+		return Response{}, err
 	}
 
 	select {
 	case <-ctx.Done():
-		return 0, nil, errors.New("request timeout")
+		return Response{}, errors.New("request timeout")
 	case data := <-resp:
-		return data.msgType, data.msg, data.err
+		return data, nil
 	}
 
 }

@@ -156,9 +156,9 @@ func (a *accountsWebsocket) request(ctx context.Context, names ...string) ([]byt
 			Method: "REQUEST",
 			Params: names,
 		}
-		bytes []byte
-		err   error
-		data  struct {
+		response binancewebsockets.Response
+		err      error
+		data     struct {
 			ID     interface{} `json:"id"`
 			Result []struct {
 				RequestName string      `json:"req"`
@@ -167,11 +167,15 @@ func (a *accountsWebsocket) request(ctx context.Context, names ...string) ([]byt
 		}
 	)
 
-	if _, bytes, err = a.ws.MakeRequestByIntIndex(ctx, request); err != nil {
+	if response, err = a.ws.MakeRequestByIntIndex(ctx, request); err != nil {
 		return nil, err
 	}
 
-	if err = json.Unmarshal(bytes, &data); err != nil {
+	if response.Err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(response.Msg, &data); err != nil {
 		return nil, err
 	}
 
