@@ -1,47 +1,18 @@
-package trades
+package tradeswebsockets
 
-import (
-	"errors"
-)
+import "errors"
 
 type placeOrderFormBuilder struct {
-	account Account
-	order   PlaceOrderForm
-	builder signatureBuilder
+	order PlaceOrderForm
 }
 
 func (p placeOrderFormBuilder) check() error {
-
-	if p.account == nil {
-		return errors.New("need object account in builder")
-	}
 
 	if p.order == nil {
 		return errors.New("need object order in builder")
 	}
 
-	if p.builder == nil {
-		return errors.New("need signatureBuilder in builder")
-	}
-
 	return nil
-
-}
-
-func (p placeOrderFormBuilder) buildRequestBody() (map[string]interface{}, error) {
-
-	var (
-		bodyMap map[string]interface{}
-		err     error
-	)
-
-	if bodyMap, err = p.buildMap(); err != nil {
-		return nil, err
-	}
-
-	p.builder.SetAPIKeyAndSecret(p.account.GetAPIKey(), p.account.GetAPISecret())
-
-	return p.builder.BuildRequestBodyWithSignature(bodyMap)
 
 }
 

@@ -1,4 +1,4 @@
-package trades
+package tradeswebsockets
 
 type Account interface {
 	GetAPIKey() string

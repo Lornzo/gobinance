@@ -1,4 +1,4 @@
-package trades
+package tradeswebsockets
 
 type CancelOrderForm interface {
 	CheckRequired() error

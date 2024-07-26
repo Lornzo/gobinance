@@ -1,11 +1,11 @@
-package trades
+package tradeforms
 
 import (
 	"github.com/Lornzo/gobinance/gobinanceenums"
 	"github.com/shopspring/decimal"
 )
 
-type PlaceOrderFormBinance struct {
+type PlaceOrder struct {
 	gobinanceenums.Side
 	gobinanceenums.PositionSide
 	gobinanceenums.OrderType
@@ -26,42 +26,42 @@ type PlaceOrderFormBinance struct {
 	Timestamp        int64
 }
 
-func (p *PlaceOrderFormBinance) CheckRequired() error {
+func (p *PlaceOrder) CheckRequired() error {
 	return nil
 }
 
-func (p *PlaceOrderFormBinance) GetSymbol() string {
+func (p *PlaceOrder) GetSymbol() string {
 	return p.Symbol
 }
 
-func (p *PlaceOrderFormBinance) GetQuantity() decimal.Decimal {
+func (p *PlaceOrder) GetQuantity() decimal.Decimal {
 	return p.Quantity
 }
 
-func (p *PlaceOrderFormBinance) GetPrice() decimal.Decimal {
+func (p *PlaceOrder) GetPrice() decimal.Decimal {
 	return p.Price
 }
 
-func (p *PlaceOrderFormBinance) GetNewClientOrderID() string {
+func (p *PlaceOrder) GetNewClientOrderID() string {
 	return p.NewClientOrderID
 }
 
-func (p *PlaceOrderFormBinance) GetStopPrice() decimal.Decimal {
+func (p *PlaceOrder) GetStopPrice() decimal.Decimal {
 	return p.StopPrice
 }
 
-func (p *PlaceOrderFormBinance) GetActivationPrice() decimal.Decimal {
+func (p *PlaceOrder) GetActivationPrice() decimal.Decimal {
 	return p.ActivationPrice
 }
 
-func (p *PlaceOrderFormBinance) GetCallbackRate() decimal.Decimal {
+func (p *PlaceOrder) GetCallbackRate() decimal.Decimal {
 	return p.CallbackRate
 }
 
-func (p *PlaceOrderFormBinance) GetRecvWindow() int64 {
+func (p *PlaceOrder) GetRecvWindow() int64 {
 	return p.RecvWindow
 }
 
-func (p *PlaceOrderFormBinance) GetTimestamp() int64 {
+func (p *PlaceOrder) GetTimestamp() int64 {
 	return p.Timestamp
 }

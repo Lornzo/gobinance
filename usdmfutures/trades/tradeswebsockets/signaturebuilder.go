@@ -1,4 +1,4 @@
-package trades
+package tradeswebsockets
 
 type signatureBuilder interface {
 	SetAPIKeyAndSecret(key string, secret string)

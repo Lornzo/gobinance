@@ -1,4 +1,4 @@
-package trades
+package tradeswebsockets
 
 import "github.com/shopspring/decimal"
 

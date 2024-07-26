@@ -1,48 +1,18 @@
-package trades
+package tradeswebsockets
 
-import (
-	"errors"
-)
+import "errors"
 
 type cancelOrderFormBuilder struct {
-	account         Account
-	order           CancelOrderForm
-	concreteBuilder signatureBuilder
+	order CancelOrderForm
 }
 
 func (c cancelOrderFormBuilder) check() error {
 
-	if c.account == nil {
-		return errors.New("need object account in builder")
-	}
-
 	if c.order == nil {
-		return errors.New("need object order in builder")
-	}
-
-	if c.concreteBuilder == nil {
-		return errors.New("need signatureBuilder in builder")
+		return errors.New("CancelOrderForm is nil")
 	}
 
 	return nil
-
-}
-
-func (c cancelOrderFormBuilder) buildRequestBody() (map[string]interface{}, error) {
-
-	var (
-		bodyMap map[string]interface{}
-		err     error
-	)
-
-	if bodyMap, err = c.buildMap(); err != nil {
-		return nil, err
-	}
-
-	c.concreteBuilder.SetAPIKeyAndSecret(c.account.GetAPIKey(), c.account.GetAPISecret())
-
-	return c.concreteBuilder.BuildRequestBodyWithSignature(bodyMap)
-
 }
 
 func (c cancelOrderFormBuilder) buildMap() (map[string]interface{}, error) {
