@@ -16,7 +16,7 @@ type tradeWebsocket struct {
 }
 
 func (t *tradeWebsocket) RunNewThread(ctx context.Context) {
-	t.ws.RunNewThread(ctx, t.runHandler)
+	t.ws.RunNewThread(ctx)
 }
 
 func (t *tradeWebsocket) PlaceOrder(ctx context.Context, account Account, order PlaceOrderForm) (Order, error) {
@@ -134,8 +134,6 @@ func (t *tradeWebsocket) requestBytes(ctx context.Context, method string, reques
 	return response.Msg, nil
 
 }
-
-func (t *tradeWebsocket) runHandler(msgType int, msg []byte, msgErr error) {}
 
 func (t *tradeWebsocket) Close() error {
 	return t.ws.Close()
