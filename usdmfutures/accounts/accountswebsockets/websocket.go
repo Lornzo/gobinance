@@ -10,10 +10,33 @@ import (
 )
 
 type Websocket interface {
+	ExtendListenKey(ctx context.Context) (string, error)
+	CloseListenKey(ctx context.Context) (string, error)
 	RequestUserPosition(ctx context.Context) (AccountPositions, error)
 	RequestBalance(ctx context.Context) (AccountBalances, error)
 	RequestAccountInformation(ctx context.Context) (AccountInformation, error)
-	CloseListenKey(ctx context.Context) (string, error)
+	SubscribeRateLimits(subscriber RateLimitsSubscriber) error
+	UnSubscribeRateLimits(subscriber RateLimitsSubscriber) error
+	SubscribeError(subscriber ErrorSubscriber) error
+	UnSubscribeError(subscriber ErrorSubscriber) error
+	SubscribeListenKeyExpired(subscriber ListenKeyExpiredSubscriber) error
+	UnSubscribeListenKeyExpired(subscriber ListenKeyExpiredSubscriber) error
+	SubscribeAccountUpdate(subscriber AccountUpdateSubscriber) error
+	UnSubscribeAccountUpdate(subscriber AccountUpdateSubscriber) error
+	SubscribeMarginCall(subscriber MarginCallSubscriber) error
+	UnSubscribeMarginCall(subscriber MarginCallSubscriber) error
+	SubscribeOrderUpdate(subscriber OrderTradeUpdateSubscriber) error
+	UnSubscribeOrderUpdate(subscriber OrderTradeUpdateSubscriber) error
+	SubscribeAccountConfigUpdate(subscriber AccountConfigUpdateSubscriber) error
+	UnSubscribeAccountConfigUpdate(subscriber AccountConfigUpdateSubscriber) error
+	SubscribeAccountInfoUpdate(subscriber AccountInfoUpdateSubscriber) error
+	UnSubscribeAccountInfoUpdate(subscriber AccountInfoUpdateSubscriber) error
+	SubscribeStrategyUpdate(subscriber StrategyUpdateSubscriber) error
+	UnSubscribeStrategyUpdate(subscriber StrategyUpdateSubscriber) error
+	SubscribeGridUpdate(subscriber GridUpdateSubscriber) error
+	UnSubscribeGridUpdate(subscriber GridUpdateSubscriber) error
+	SubscribeConditionalOrderTriggerReject(subscriber ConditionalOrderTriggerRejectSubscriber) error
+	UnSubscribeConditionalOrderTriggerReject(subscriber ConditionalOrderTriggerRejectSubscriber) error
 	Close() error
 	Run(ctx context.Context)
 	RunNewThread(ctx context.Context)
