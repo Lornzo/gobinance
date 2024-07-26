@@ -19,6 +19,10 @@ func (t *tradeWebsocket) RunNewThread(ctx context.Context) {
 	t.ws.RunNewThread(ctx)
 }
 
+func (t *tradeWebsocket) Run(ctx context.Context) {
+	t.ws.Run(ctx)
+}
+
 func (t *tradeWebsocket) PlaceOrder(ctx context.Context, account Account, order PlaceOrderForm) (Order, error) {
 	return t.requestOrder(ctx, trade_method_place, newFormBuilder(account, placeOrderFormBuilder{order: order}))
 }

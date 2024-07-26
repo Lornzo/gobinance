@@ -11,6 +11,7 @@ import (
 type Websocket interface {
 	Close() error
 	RunNewThread(ctx context.Context)
+	Run(ctx context.Context)
 	SubscribeKLine(ctx context.Context, subscriber KLineSubscriber) error
 	UnSubscribeKLine(ctx context.Context, subscriber KLineSubscriber) error
 	SubscribeMarkPrice(ctx context.Context, subscriber MarkPriceSubscriber) error

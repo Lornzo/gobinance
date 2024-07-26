@@ -8,6 +8,7 @@ import (
 
 type Websocket interface {
 	RunNewThread(ctx context.Context)
+	Run(ctx context.Context)
 	Close() error
 	PlaceOrder(ctx context.Context, account Account, order PlaceOrderForm) (Order, error)
 	ModifyOrder(ctx context.Context, account Account, order ModifyOrderForm) (Order, error)
