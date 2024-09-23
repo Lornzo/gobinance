@@ -33,3 +33,9 @@ func NewWebsocket(ctx context.Context, binanceWebsocketURL string) (Websocket, e
 	return ws, nil
 
 }
+
+func NewWebsocketWithBinanceWebsocket(ws binancewebsockets.Websocket) Websocket {
+	return &marketDatasWebsocket{
+		ws: ws,
+	}
+}

@@ -7,32 +7,80 @@ import (
 	"sync"
 
 	"github.com/Lornzo/gobinance/channels"
+	"github.com/Lornzo/gobinance/internal/loggers"
 	"github.com/Lornzo/gobinance/threadsafetypes"
 	"github.com/gorilla/websocket"
 )
 
 type websocketWithSubscribers struct {
+	logger loggers.Logger
 	*websocket.Conn
 	channel     channels.WebsocketMsgChannel
 	subscribers subscribers
 	isRuning    threadsafetypes.Bool
 }
 
+func (w *websocketWithSubscribers) GetName() string {
+	return "websocketWithSubscribers"
+}
+
+func (w *websocketWithSubscribers) SetLogger(logger Logger) {
+	w.logger.SetConcreteLogger(logger)
+}
+
 func (w *websocketWithSubscribers) Subscribe(subscriber Subscriber) error {
-	return w.subscribers.add(subscriber)
+
+	var (
+		action string = "Subscribe"
+		err    error
+	)
+
+	w.logger.Debuf("%s-%s: subscriber id:%s", w.GetName(), action, subscriber.GetID())
+
+	if err = w.subscribers.add(subscriber); err != nil {
+		w.logger.Errorf("%s-%s err1: add subscriber %s error : %w", w.GetName(), action, subscriber.GetID(), err)
+		return err
+	}
+
+	return nil
 }
 
 func (w *websocketWithSubscribers) UnSubscribe(subscriber Subscriber) error {
-	return w.subscribers.remove(subscriber)
+
+	var (
+		err    error
+		action string = "UnSubscribe"
+	)
+
+	w.logger.Debuf("%s-%s: subscriber id:%s", w.GetName(), action, subscriber.GetID())
+
+	if err = w.subscribers.remove(subscriber); err != nil {
+		w.logger.Errorf("%s-%s err1: remove subscriber %s error : %w", w.GetName(), action, subscriber.GetID(), err)
+	}
+
+	return nil
 }
 
 func (w *websocketWithSubscribers) MakeRequestByIntIndex(ctx context.Context, request Request) (Response, error) {
-	var channelID int = w.channel.GetIntID()
+
+	var (
+		action    string = "MakeRequestByIntIndex"
+		channelID int    = w.channel.GetIntID()
+	)
+	w.logger.Debuf("%s-%s: channelID:%d", w.GetName(), action, channelID)
+
 	return w.MakeRequest(ctx, channelID, request)
 }
 
 func (w *websocketWithSubscribers) MakeRequestByUUIDIndex(ctx context.Context, request Request) (Response, error) {
-	var channelID string = w.channel.GetID()
+
+	var (
+		action    string = "MakeRequestByUUIDIndex"
+		channelID string = w.channel.GetID()
+	)
+
+	w.logger.Debuf("%s-%s: channelID:%s", w.GetName(), action, channelID)
+
 	return w.MakeRequest(ctx, channelID, request)
 }
 
@@ -94,6 +142,7 @@ func (w *websocketWithSubscribers) ReadMessage(ctx context.Context) (int, []byte
 	}
 
 	var (
+		action   string       = "ReadMessage"
 		msgChan  chan message = make(chan message)
 		msgType  int
 		msgBytes []byte
@@ -118,6 +167,10 @@ func (w *websocketWithSubscribers) ReadMessage(ctx context.Context) (int, []byte
 
 	if msgType == -1 {
 		msgErr = errors.New("websocket close")
+	}
+
+	if msgErr != nil {
+		w.logger.Errorf("%s-%s websocket error: msgType:%d, msg:%s, msgErr:%w", w.GetName(), action, msgType, string(msgBytes), msgErr)
 	}
 
 	go w.subscribers.update(msgType, msgBytes, msgErr)
